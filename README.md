@@ -7,53 +7,47 @@ A React application built with Vite that tracks your GCP learning roadmap progre
 ### Prerequisites
 
 - Node.js 18+ installed
-- A MongoDB database (local or cloud like MongoDB Atlas)
-- DATABASE_URL in `.env` file
+- MongoDB Atlas account (for browser-compatible connection)
+- MongoDB Atlas Data API enabled
 
 ### Setup
 
-1. **Install Frontend Dependencies**
+1. **Install Dependencies**
 
 ```bash
 npm install
 ```
 
-2. **Install Backend Dependencies**
+2. **Set Up MongoDB Atlas Data API**
 
-```bash
-cd server
-npm install
-cd ..
-```
+Since MongoDB doesn't support direct browser connections, we use MongoDB Atlas Data API:
+
+1. Go to your MongoDB Atlas dashboard
+2. Navigate to **App Services** → **Data API**
+3. Enable the Data API
+4. Create an API Key
+5. Note your Data API URL and API Key
 
 3. **Configure Environment Variables**
 
 Create a `.env` file in the root directory:
 
 ```env
-DATABASE_URL=mongodb://user:password@host:port/database
-PORT=3001
+# MongoDB connection string (for reference, not used directly in browser)
+VITE_DATABASE_URL=mongodb+srv://username:password@cluster.mongodb.net/gcp_path
+
+# MongoDB Atlas Data API (required for browser connection)
+VITE_DATA_API_URL=https://data.mongodb-api.com/app/your-app-id/endpoint/data/v1
+VITE_DATA_API_KEY=your-api-key-here
+VITE_DATA_SOURCE=Cluster0
 ```
 
-For example:
-- Local MongoDB: `mongodb://localhost:27017/gcp_path`
-- MongoDB Atlas: `mongodb+srv://username:password@cluster.mongodb.net/gcp_path?retryWrites=true&w=majority`
-- MongoDB with authentication: `mongodb://username:password@localhost:27017/gcp_path?authSource=admin`
+**Where to find these values:**
+- `VITE_DATA_API_URL`: Found in MongoDB Atlas → App Services → Data API → Endpoint URL
+- `VITE_DATA_API_KEY`: Found in MongoDB Atlas → App Services → Data API → API Keys
+- `VITE_DATA_SOURCE`: Your cluster name (usually `Cluster0`)
 
-4. **Start the Backend Server**
-
-```bash
-cd server
-npm start
-# or for development with auto-reload:
-npm run dev
-```
-
-The API server will run on `http://localhost:3001`
-
-5. **Start the Frontend**
-
-In a new terminal:
+4. **Start the Frontend**
 
 ```bash
 npm run dev
@@ -79,14 +73,7 @@ The `item_id` field is automatically indexed for fast lookups.
 
 ### Development
 
-**Frontend Development:**
 ```bash
-npm run dev
-```
-
-**Backend Development:**
-```bash
-cd server
 npm run dev
 ```
 
@@ -117,15 +104,8 @@ npm run preview
 - Lucide React (icons)
 
 **Backend:**
-- Express.js
-- MongoDB (mongodb driver)
-- CORS enabled
-
-## API Endpoints
-
-- `GET /api/progress` - Get all completed items
-- `POST /api/progress` - Save/update progress for an item
-- `DELETE /api/progress` - Reset all progress
+- Direct MongoDB connection via Atlas Data API
+- No separate backend server needed
 
 ## Features
 

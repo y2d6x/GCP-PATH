@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 import { 
 
@@ -8,11 +8,7 @@ import {
 
   Database, 
 
-  Code, 
-
   Terminal, 
-
-  Layers, 
 
   CheckCircle2, 
 
@@ -602,6 +598,7 @@ const roadmapData = [
 
 
 
+// eslint-disable-next-line react/prop-types
 const ProgressBar = ({ progress, color }) => {
 
   const getColorClass = (c) => {
@@ -648,8 +645,7 @@ const ProgressBar = ({ progress, color }) => {
 
 
 
-// Use relative URL in development (proxied by Vite) or absolute URL in production
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:3001');
+import { getProgress, saveProgress, resetProgress as dbResetProgress } from './db';
 
 export default function App() {
 
@@ -673,17 +669,9 @@ export default function App() {
 
         setLoading(true);
 
-        const response = await fetch(`${API_URL}/api/progress`);
+        const completedItemsArray = await getProgress();
 
-        if (!response.ok) {
-
-          throw new Error('Failed to fetch progress');
-
-        }
-
-        const data = await response.json();
-
-        setCompletedItems(new Set(data.completedItems || []));
+        setCompletedItems(new Set(completedItemsArray));
 
         setError(null);
 
@@ -691,7 +679,7 @@ export default function App() {
 
         console.error('Error loading progress:', err);
 
-        setError('Failed to load progress. Please check if the server is running.');
+        setError('Failed to load progress. Please check your database connection.');
 
       } finally {
 
@@ -739,33 +727,9 @@ export default function App() {
 
     try {
 
-      const response = await fetch(`${API_URL}/api/progress`, {
+      await saveProgress(id, newCompletedState);
 
-        method: 'POST',
-
-        headers: {
-
-          'Content-Type': 'application/json',
-
-        },
-
-        body: JSON.stringify({
-
-          itemId: id,
-
-          completed: newCompletedState,
-
-        }),
-
-      });
-
-
-
-      if (!response.ok) {
-
-        throw new Error('Failed to save progress');
-
-      }
+      setError(null);
 
     } catch (err) {
 
@@ -849,19 +813,7 @@ export default function App() {
 
       try {
 
-        const response = await fetch(`${API_URL}/api/progress`, {
-
-          method: 'DELETE',
-
-        });
-
-
-
-        if (!response.ok) {
-
-          throw new Error('Failed to reset progress');
-
-        }
+        await dbResetProgress();
 
         setCompletedItems(new Set());
 
