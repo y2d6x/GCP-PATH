@@ -648,57 +648,136 @@ const ProgressBar = ({ progress, color }) => {
 
 
 
+// Use relative URL in development (proxied by Vite) or absolute URL in production
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:3001');
+
 export default function App() {
 
-  const [completedItems, setCompletedItems] = useState(() => {
-
-    // Load from local storage or default to empty set
-
-    try {
-
-      const saved = localStorage.getItem('gcpRoadmapProgress');
-
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-
-    } catch (e) {
-
-      return new Set();
-
-    }
-
-  });
-
-
+  const [completedItems, setCompletedItems] = useState(new Set());
 
   const [expandedMonth, setExpandedMonth] = useState(1);
 
+  const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState(null);
+
+
+
+  // Load progress from database on mount
 
   useEffect(() => {
 
-    // Save to local storage whenever state changes
+    const fetchProgress = async () => {
 
-    localStorage.setItem('gcpRoadmapProgress', JSON.stringify([...completedItems]));
+      try {
 
-  }, [completedItems]);
+        setLoading(true);
+
+        const response = await fetch(`${API_URL}/api/progress`);
+
+        if (!response.ok) {
+
+          throw new Error('Failed to fetch progress');
+
+        }
+
+        const data = await response.json();
+
+        setCompletedItems(new Set(data.completedItems || []));
+
+        setError(null);
+
+      } catch (err) {
+
+        console.error('Error loading progress:', err);
+
+        setError('Failed to load progress. Please check if the server is running.');
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
 
 
 
-  const toggleItem = (id) => {
+    fetchProgress();
+
+  }, []);
+
+
+
+  const toggleItem = async (id) => {
 
     const newCompleted = new Set(completedItems);
 
-    if (newCompleted.has(id)) {
+    const isCurrentlyCompleted = newCompleted.has(id);
 
-      newCompleted.delete(id);
+    const newCompletedState = !isCurrentlyCompleted;
+
+    
+
+    // Optimistically update UI
+
+    if (newCompletedState) {
+
+      newCompleted.add(id);
 
     } else {
 
-      newCompleted.add(id);
+      newCompleted.delete(id);
 
     }
 
     setCompletedItems(newCompleted);
+
+
+
+    // Save to database
+
+    try {
+
+      const response = await fetch(`${API_URL}/api/progress`, {
+
+        method: 'POST',
+
+        headers: {
+
+          'Content-Type': 'application/json',
+
+        },
+
+        body: JSON.stringify({
+
+          itemId: id,
+
+          completed: newCompletedState,
+
+        }),
+
+      });
+
+
+
+      if (!response.ok) {
+
+        throw new Error('Failed to save progress');
+
+      }
+
+    } catch (err) {
+
+      console.error('Error saving progress:', err);
+
+      // Revert optimistic update on error
+
+      setCompletedItems(completedItems);
+
+      setError('Failed to save progress. Please try again.');
+
+    }
 
   };
 
@@ -764,11 +843,37 @@ export default function App() {
 
 
 
-  const resetProgress = () => {
+  const resetProgress = async () => {
 
     if (confirm("Are you sure you want to reset all progress?")) {
 
-      setCompletedItems(new Set());
+      try {
+
+        const response = await fetch(`${API_URL}/api/progress`, {
+
+          method: 'DELETE',
+
+        });
+
+
+
+        if (!response.ok) {
+
+          throw new Error('Failed to reset progress');
+
+        }
+
+        setCompletedItems(new Set());
+
+        setError(null);
+
+      } catch (err) {
+
+        console.error('Error resetting progress:', err);
+
+        setError('Failed to reset progress. Please try again.');
+
+      }
 
     }
 
@@ -1012,17 +1117,43 @@ export default function App() {
 
         <div className="mt-12 text-center pb-8">
 
-          <p className="text-slate-500 text-sm mb-4">
+          {error && (
 
-            Progress is saved automatically to your browser.
+            <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300 text-sm">
 
-          </p>
+              {error}
+
+            </div>
+
+          )}
+
+          {loading && (
+
+            <p className="text-slate-400 text-sm mb-4">
+
+              Loading progress...
+
+            </p>
+
+          )}
+
+          {!loading && !error && (
+
+            <p className="text-slate-500 text-sm mb-4">
+
+              Progress is saved automatically to your database.
+
+            </p>
+
+          )}
 
           <button 
 
             onClick={resetProgress}
 
-            className="text-red-400 hover:text-red-300 text-sm hover:underline"
+            disabled={loading}
+
+            className="text-red-400 hover:text-red-300 text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
 
           >
 
